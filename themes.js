@@ -2,7 +2,7 @@ export const themes = {
 	'default': {
 		css: `
 			ha-card {
-				height:100%;
+				box-shadow: none;
 			}
 
 			#htc-weather-card-container {
@@ -71,7 +71,7 @@ export const themes = {
 
     		.line {
     		    /*width:175px;*/
-				width:80%;
+				width:81%;
     		    height:2px;
     		    background:#efefef;
     		    position:absolute;

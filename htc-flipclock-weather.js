@@ -1,8 +1,5 @@
 const LitElement = Object.getPrototypeOf(customElements.get("hui-view"));
 const html = LitElement.prototype.html;
-const css = LitElement.prototype.css;
-var old_time = {}
-var intervalSetNewTime = ''
 import { regional } from './regional.js?v1.1.4';
 import { themes } from './themes.js?v1.0.1';
 
@@ -24,7 +21,7 @@ weatherDefaults['imagesPath'] = weatherDefaults.widgetPath + 'themes/' + weather
 weatherDefaults['clockImagesPath'] = weatherDefaults.imagesPath + 'clock/'
 weatherDefaults['weatherImagesPath'] = weatherDefaults.imagesPath + 'weather/' + weatherDefaults.theme['weather_icon_set'] + '/'
 
-const htcVersion = "1.2.1";
+const htcVersion = "1.3.0";
 
 
 const weatherIconsDay = {
@@ -75,19 +72,6 @@ const windDirections = [
     "NNW",
     "N"
 ];
-
-const fireEvent = (node, type, detail, options) => {
-    options = options || {};
-    detail = detail === null || detail === undefined ? {} : detail;
-    const event = new Event(type, {
-        bubbles: options.bubbles === undefined ? true : options.bubbles,
-        cancelable: Boolean(options.cancelable),
-        composed: options.composed === undefined ? true : options.composed
-    });
-    event.detail = detail;
-    node.dispatchEvent(event);
-    return event;
-};
 
 function hasConfigOrEntityChanged(element, changedProps) {
     if (changedProps.has("_config")) {
@@ -168,7 +152,6 @@ class HtcWeather extends LitElement {
         }
         HtcWeather.setConfig = this._config
         HtcWeather.setHass = this.hass
-        const stateObj = this.hass.states[this._config.entity];
         var entity = this._config.entity;
         var entity_name = this._config.entity;
         if(this._config.high_low_entity){
@@ -207,43 +190,23 @@ class HtcWeather extends LitElement {
           const script = document.createElement('script');
           script.textContent = this.getScript();
           card.appendChild(script);
-          this.content = card; //document.createElement('div');
-          //this.content.style.padding = '0 2% 2%';
-          //card.appendChild(this.content);
+          this.content = card;
           this.appendChild(card);
         }
 
-        this.numberElements++;
-        old_time = HtcWeather.getOldTime()
-        const stateObj = this.hass.states[this._config.entity];
+        var old_time = HtcWeather.getOldTime()
         const root = this.content;
         if (root.lastChild) root.removeChild(root.lastChild);
 
-        /*const script = document.createElement('script');
-        script.textContent = this.getScript();
-        root.appendChild(script);*/
-
-        /*const style = document.createElement('style');
-        style.textContent = this.getStyle(this._config);
-        root.appendChild(style);*/
-
         const card = document.createElement('ha-card');
-        card.header = this._config.title;
-        card.style = `box-shadow: none;`
         root.appendChild(card);
-        /*var container_size = '470px'
-        if(!this._config.renderForecast){
-            var container_size = '320px'
-        }*/
+
         const container = document.createElement('div');
         container.id = 'htc-weather-card-container';
-        //container.onclick = this._handleClick(this._config.entity)
-        //container.style = `height: ${container_size};`
         card.appendChild(container);
 
         const htc_clock = document.createElement('div')
         htc_clock.id = 'htc-clock'
-        htc_clock.classList.add(`htc-clock-${this.numberElements}`)
         container.appendChild(htc_clock)
 
         const htc_clock_hours = document.createElement('div')
@@ -254,9 +217,6 @@ class HtcWeather extends LitElement {
         htc_clock_hours_line.classList.add('line')
         htc_clock_hours.appendChild(htc_clock_hours_line)
 
-        /*const hours_bg = document.createElement('div')
-        hours_bg.id = 'hours_bg'
-        htc_clock_hours.appendChild(hours_bg)*/
 
         const hours_bg_img = document.createElement('img')
         hours_bg_img.src = `${this._config.clockImagesPath + 'clockbg1.png'}`
@@ -279,9 +239,6 @@ class HtcWeather extends LitElement {
         htc_clock_minutes.id = 'minutes'
         htc_clock.appendChild(htc_clock_minutes)
 
-        /*const htc_clock_minutes_bg = document.createElement('div')
-        htc_clock_minutes_bg.id = 'minutes_bg'
-        htc_clock_minutes.appendChild(htc_clock_minutes_bg)*/
         
 
         const hours_min_img = document.createElement('img')
@@ -318,7 +275,6 @@ class HtcWeather extends LitElement {
 
         const htc_weather = document.createElement('div')
         htc_weather.id = 'htc-weather'
-        htc_weather.classList.add(`htc-weather-${this.numberElements}`)
         container.appendChild(htc_weather)
 
         const spinner = document.createElement('p')
@@ -357,7 +313,6 @@ class HtcWeather extends LitElement {
         weather += HtcWeather.getHighLow();
         
         weather += '</p></div>';
-        // weather += '<div id="temp"><p id="date">&nbsp</p>'  + curr_temp + '</div>';
 
         $(elem).html(weather);
         if(config.renderForecast){
@@ -366,7 +321,6 @@ class HtcWeather extends LitElement {
          
             for (var i = 0; i <= 3; i++) {
 
-                var d_day_code = String(i) + '_resume';
                 var d_date = new Date(stateObj.attributes.forecast[i].datetime);
                 var forecastIcon =  HtcWeather.getWeatherIcon(config, stateObj.attributes.forecast[i].condition)
                 var forecast = `<li>`;
@@ -481,80 +435,28 @@ class HtcWeather extends LitElement {
         var fmd = $(elem).find('#minutes').find("#fmd")
         var smd = $(elem).find('#minutes').find("#smd")
         var bg = $(elem).find('#minutes').find("#digit_bg")
-        for(let i = 1; i < 6;++i){
-            if(i%2 != 0){ //odd
-                setTimeout(function() {
-                    $(fmd).attr('src', config.clockImagesPath + firstMinuteDigit + '-'+(Math.ceil(i/2)).toString()+'.png');
-                    $(smd).attr('src', config.clockImagesPath + secondMinuteDigit + '-'+(Math.ceil(i/2)).toString()+'.png');
-                    $(bg).attr('src', config.clockImagesPath + 'clockbg'+(i+1).toString()+'.png');
-                    //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg2.png');
-                },100*i+20);
+        
+        for (let i = 1; i < 6; ++i){
+            var time = 100 * i + 20; //time equation
+            if (i % 2 != 0) { //odd
+                var image_number = (Math.ceil(i / 2)).toString();
+                setTimeout(function () {
+                    $(fmd).attr('src', config.clockImagesPath + firstMinuteDigit + '-' + image_number + '.png');
+                    $(smd).attr('src', config.clockImagesPath + secondMinuteDigit + '-' + image_number + '.png');
+                    $(bg).attr('src', config.clockImagesPath + 'clockbg' + (i + 1).toString() + '.png');
+                },time);
             }else{
                 setTimeout(function() { 
                     $(bg).attr('src', config.clockImagesPath + 'clockbg'+(i+1).toString()+'.png');
-                    //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg3.png')
-                },100*i+20);
+                },time);
             }
         } 
-        /*setTimeout(function() {
-            $(fmd).attr('src', config.clockImagesPath + firstMinuteDigit + '-1.png');
-            $(smd).attr('src', config.clockImagesPath + secondMinuteDigit + '-1.png');
-            $(bg).attr('src', config.clockImagesPath + 'clockbg2.png');
-            //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg2.png');
-        },100);
-        setTimeout(function() { 
-            $(bg).attr('src', config.clockImagesPath + 'clockbg3.png');
-            //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg3.png')
-        },150);
-        setTimeout(function() {
-            $(fmd).attr('src', config.clockImagesPath + firstMinuteDigit + '-2.png');
-            $(smd).attr('src', config.clockImagesPath + secondMinuteDigit + '-2.png');
-            $(bg).attr('src', config.clockImagesPath + 'clockbg4.png');
-            //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg4.png');
-        },200);
-        setTimeout(function() { 
-            $(bg).attr('src', config.clockImagesPath + 'clockbg5.png');
-            //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg5.png')
-        },250);
-        setTimeout(function() {
-            $(fmd).attr('src', config.clockImagesPath + firstMinuteDigit + '-3.png');
-            $(smd).attr('src', config.clockImagesPath + secondMinuteDigit + '-3.png');
-            $(bg).attr('src', config.clockImagesPath + 'clockbg6.png');
-           // $(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg6.png');
-        },350);*/
-        /*
-        setTimeout(function() {
-            $(smd).attr('src', config.clockImagesPath + secondMinuteDigit + '-1.png');
-            $(bg).attr('src', config.clockImagesPath + 'clockbg2.png');
-            //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg2.png');
-        },40);
-        setTimeout(function() { 
-            $(bg).attr('src', config.clockImagesPath + 'clockbg3.png');
-            //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg3.png')
-        },40);
-        setTimeout(function() {
-            $(smd).attr('src', config.clockImagesPath + secondMinuteDigit + '-2.png');
-            $(bg).attr('src', config.clockImagesPath + 'clockbg4.png');
-            //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg4.png');
-        },40);
-        setTimeout(function() { 
-            $(bg).attr('src', config.clockImagesPath + 'clockbg5.png');
-            //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg5.png')
-        },40);
-        setTimeout(function() {
-            $(smd).attr('src', config.clockImagesPath + secondMinuteDigit + '-3.png');
-            $(bg).attr('src', config.clockImagesPath + 'clockbg6.png');
-            //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg6.png');
-        },40);
-    
-        setTimeout(function() {$(fmd).attr('src', config.clockImagesPath + now_minutes.substr(0,1) + '.png')},40);
-        setTimeout(function() {$(smd).attr('src', config.clockImagesPath + now_minutes.substr(1,1) + '.png')},40);        */  
-        setTimeout(function() {
+      
+        setTimeout(function () {
             $(fmd).attr('src', config.clockImagesPath + now_minutes.substr(0,1) + '.png');
             $(smd).attr('src', config.clockImagesPath + now_minutes.substr(1,1) + '.png');
             $(bg).attr('src', config.clockImagesPath + 'clockbg1.png');
-            //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg1.png')
-        },620);
+        }, 100 * 6 + 20);
 
         if (now_minutes == '00') {
            
@@ -585,77 +487,30 @@ class HtcWeather extends LitElement {
             var fhd = $(elem).find('#hours').find('#fhd')
             var shd = $(elem).find('#hours').find('#shd')
             var bg = $(elem).find('#hours').find("#digit_bg")
-            /*setTimeout(function() {
-                $(fhd).attr('src', config.clockImagesPath + firstHourDigit + '-1.png');
-                $(bg).attr('src', config.clockImagesPath + 'clockbg2.png');
-               // $(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg2.png');
-            },40);
-            setTimeout(function() { 
-                $(bg).attr('src', config.clockImagesPath + 'clockbg3.png');
-               //$(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg3.png')
-            },40);
-            setTimeout(function() {
-                $(fhd).attr('src', config.clockImagesPath + firstHourDigit + '-2.png');
-                $(bg).attr('src', config.clockImagesPath + 'clockbg4.png');
-                //$(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg4.png');
-            },40);
-            setTimeout(function() { 
-                $(bg).attr('src', config.clockImagesPath + 'clockbg5.png');
-                //$(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg5.png')
-            },40);
-            setTimeout(function() {
-                $(fhd).attr('src', config.clockImagesPath + firstHourDigit + '-3.png');
-                $(bg).attr('src', config.clockImagesPath + 'clockbg6.png');
-                //$(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg6.png');
-            },40);
 
-            setTimeout(function() {
-                $(shd).attr('src', config.clockImagesPath + secondHourDigit + '-1.png');
-                $(bg).attr('src', config.clockImagesPath + 'clockbg2.png');
-                //$(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg2.png');
-            },40);
-            setTimeout(function() { 
-                $(bg).attr('src', config.clockImagesPath + 'clockbg3.png');
-                //$(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg3.png')
-            },40);
-            setTimeout(function() {
-                $(shd).attr('src', config.clockImagesPath + secondHourDigit + '-2.png');
-                $(bg).attr('src', config.clockImagesPath + 'clockbg4.png');
-                //$(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg4.png');
-            },40);
-            setTimeout(function() { 
-                $(bg).attr('src', config.clockImagesPath + 'clockbg5.png');
-                //$(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg5.png')
-            },40);
-            setTimeout(function() {
-                $(shd).attr('src', config.clockImagesPath + secondHourDigit + '-3.png');
-                $(bg).attr('src', config.clockImagesPath + 'clockbg6.png');
-                //$(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg6.png');
-            },40);
-            */
-            for(let i = 1; i < 6;++i){
-                if(i%2 != 0){ //odd
+            for (let i = 1; i < 6; ++i){
+                var time = 100 * i + 20; //time equation
+                if (i % 2 != 0) { //odd
+                    var image_number = (Math.ceil(i / 2)).toString();
                     setTimeout(function() {
-                        $(fmd).attr('src', config.clockImagesPath + firstHourDigit + '-'+(Math.ceil(i/2)).toString()+'.png');
-                        $(smd).attr('src', config.clockImagesPath + secondHourDigit + '-'+(Math.ceil(i/2)).toString()+'.png');
+                        $(fmd).attr('src', config.clockImagesPath + firstHourDigit + '-'+ image_number +'.png');
+                        $(smd).attr('src', config.clockImagesPath + secondHourDigit + '-'+ image_number +'.png');
                         $(bg).attr('src', config.clockImagesPath + 'clockbg'+(i+1).toString()+'.png');
-                        //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg2.png');
-                    },100*i+20);
+                    }, time);
                 }else{
                     setTimeout(function() { 
                         $(bg).attr('src', config.clockImagesPath + 'clockbg'+(i+1).toString()+'.png');
-                        //$(elem).find('#minutes').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg3.png')
-                    },100*i+20);
+
+                    }, time);
                 }
             } 
-            //setTimeout(function() {$(fhd).attr('src', config.clockImagesPath + now_hours.substr(0,1) + '.png')},40);
-            //setTimeout(function() {$(shd).attr('src', config.clockImagesPath + now_hours.substr(1,1) + '.png')},40);
+           
             setTimeout(function() { 
                 $(fhd).attr('src', config.clockImagesPath + now_hours.substr(0,1) + '.png');
                 $(shd).attr('src', config.clockImagesPath + now_hours.substr(1,1) + '.png')
                 $(bg).attr('src', config.clockImagesPath + 'clockbg1.png');
-                //$(elem).find('#hours').find('img.digit_bg').attr('src', config.clockImagesPath + 'clockbg1.png')
-            },620);
+
+            }, 100 * 6 + 20);
         }
     }
     static getUnit(measure) {
@@ -713,9 +568,6 @@ class HtcWeather extends LitElement {
         }.png`;
     }
 
-    _handleClick(entity) {
-        fireEvent(this, "hass-more-info", { entityId: entity });
-    }
 
     getCardSize() {
         return 3;
