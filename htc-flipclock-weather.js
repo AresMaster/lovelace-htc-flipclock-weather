@@ -1,5 +1,11 @@
-const LitElement = Object.getPrototypeOf(customElements.get("hui-view"));
-const html = LitElement.prototype.html;
+//import "https://unpkg.com/wired-card@0.8.1/wired-card.js?module";
+//import "https://unpkg.com/wired-toggle@0.8.0/wired-toggle.js?module";
+import {
+    LitElement,
+    html
+} from "https://unpkg.com/lit-element@2.0.1/lit-element.js?module";
+//const LitElement = Object.getPrototypeOf(customElements.get("hui-view"));
+//const html = LitElement.prototype.html;
 import { regional } from './regional.js?v1.1.4';
 import { themes } from './themes.js?v1.0.1';
 
@@ -21,7 +27,7 @@ weatherDefaults['imagesPath'] = weatherDefaults.widgetPath + 'themes/' + weather
 weatherDefaults['clockImagesPath'] = weatherDefaults.imagesPath + 'clock/'
 weatherDefaults['weatherImagesPath'] = weatherDefaults.imagesPath + 'weather/' + weatherDefaults.theme['weather_icon_set'] + '/'
 
-const htcVersion = "1.3.0";
+const htcVersion = "1.3.1";
 
 
 const weatherIconsDay = {
@@ -52,7 +58,7 @@ const weatherIconsNight = {
     "windy-variant": "cloudy-night-3"
 };
 
-
+/*
 const windDirections = [
     "N",
     "NNE",
@@ -72,6 +78,19 @@ const windDirections = [
     "NNW",
     "N"
 ];
+*/
+const fireEvent = (node, type, detail, options) => {
+    options = options || {};
+    detail = detail === null || detail === undefined ? {} : detail;
+    const event = new Event(type, {
+        bubbles: options.bubbles === undefined ? true : options.bubbles,
+        cancelable: Boolean(options.cancelable),
+        composed: options.composed === undefined ? true : options.composed
+    });
+    event.detail = detail;
+    node.dispatchEvent(event);
+    return event;
+};
 
 function hasConfigOrEntityChanged(element, changedProps) {
     if (changedProps.has("_config")) {
@@ -120,7 +139,7 @@ class HtcWeather extends LitElement {
 
     setConfig(config) {
         if (!config.entity) {
-            throw new Error("Please define a weather entity");
+            throw new Error(`Entity not available/installed: ${config.entity}`);
         }
         var defaultConfig = {}
         for (const property in config) {
@@ -152,15 +171,15 @@ class HtcWeather extends LitElement {
         }
         HtcWeather.setConfig = this._config
         HtcWeather.setHass = this.hass
-        var entity = this._config.entity;
-        var entity_name = this._config.entity;
+        //var entity = this._config.entity;
+        //var entity_name = this._config.entity;
         if(this._config.high_low_entity){
             if(!this.hass.states[this._config.high_low_entity.entity_id]){
                 entity = this.hass.states[this._config.high_low_entity.entity_id]
                 entity_name = this._config.high_low_entity.entity_id;
             }
         }
-
+/*
         if (!entity) {
           return html`
             <style>
@@ -177,7 +196,7 @@ class HtcWeather extends LitElement {
             </ha-card>
           `;
         }
-        
+        */
         return this.renderCard()
     }
     renderCard() {
@@ -197,13 +216,16 @@ class HtcWeather extends LitElement {
         var old_time = HtcWeather.getOldTime()
         const root = this.content;
         if (root.lastChild) root.removeChild(root.lastChild);
+        //root.innerHTML = '';
 
-        const card = document.createElement('ha-card');
-        root.appendChild(card);
-
+        //const card = document.createElement('ha-card');
+        //root.appendChild(card);
+        root.onclick = function () {
+            this._handleClick(this._config.entity);
+        }.bind(this);
         const container = document.createElement('div');
         container.id = 'htc-weather-card-container';
-        card.appendChild(container);
+        root.appendChild(container);
 
         const htc_clock = document.createElement('div')
         htc_clock.id = 'htc-clock'
@@ -291,6 +313,7 @@ class HtcWeather extends LitElement {
             HtcWeather.setNewTime(htc_clock)
             HtcWeather.setNewWeather(htc_weather)
         }
+        return html`${root}`;
     }
     static setNewWeather(elem){
         var config = HtcWeather.getConfig;
@@ -548,7 +571,7 @@ class HtcWeather extends LitElement {
             $(elem).find('#wind_details').append(`
                     <span class="ha-icon"><ha-icon icon="mdi:weather-windy"></ha-icon></span>
                     ${
-                        windDirections[
+                        regional[config.lang]['windDirections'][
                           parseInt((stateObj.attributes.wind_bearing + 11.25) / 22.5)
                         ]
                     } ${stateObj.attributes.wind_speed}<span class="unit">
@@ -557,7 +580,9 @@ class HtcWeather extends LitElement {
         }
         return
     }
-
+    _handleClick(entity) {
+        fireEvent(this, "hass-more-info", { entityId: entity });
+    }
     static getWeatherIcon(config, condition) {
         var hass_states = HtcWeather.getHass.states;
 
@@ -576,6 +601,9 @@ class HtcWeather extends LitElement {
 
     getStyle(config) {
         return themes[config.theme['name']]['css'];
+    }
+    static get styles() {
+        // return css(themes[this._config.theme['name']]['css']);
     }
 }
 customElements.define("htc-weather-card", HtcWeather);
